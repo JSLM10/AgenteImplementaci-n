@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 760" width="900" height="760" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8fa498"/>
+    </marker>
+    <style>
+      .caja   { fill:#0e1c16; stroke:#2b4438; stroke-width:1.5; }
+      .zona   { fill:none; stroke:#2b4438; stroke-width:1.5; stroke-dasharray:5 4; }
+      .nodo   { fill:#16281f; stroke:#34d399; stroke-width:1.2; }
+      .fin    { fill:#16281f; stroke:#f5b02e; stroke-width:1.2; }
+      .t      { fill:#e8efe9; font-size:14px; }
+      .tb     { fill:#e8efe9; font-size:15px; font-weight:600; }
+      .s      { fill:#8fa498; font-size:12px; }
+      .ss     { fill:#5a6d63; font-size:11px; }
+      .et     { fill:#34d399; font-size:11px; font-weight:600; }
+      .flecha { stroke:#8fa498; stroke-width:1.5; fill:none; marker-end:url(#f); }
+    </style>
+  </defs>
+
+  <rect width="900" height="760" fill="#08120e"/>
+
+  <text x="32" y="38" class="tb" font-size="19">VAR — Verificador Aumentado de Respuestas</text>
+  <text x="32" y="58" class="s">Arquitectura general</text>
+
+  <!-- Usuario -->
+  <rect x="340" y="82" width="220" height="40" rx="3" class="caja"/>
+  <text x="450" y="107" class="t" text-anchor="middle">Usuario autenticado</text>
+  <path d="M450 122 V 150" class="flecha"/>
+
+  <!-- Frontend -->
+  <rect x="250" y="150" width="400" height="66" rx="3" class="caja"/>
+  <text x="270" y="176" class="tb">Frontend · React + Vite + Tailwind</text>
+  <text x="270" y="198" class="s">Login · Chat con orbe · Documentos</text>
+  <text x="630" y="198" class="ss" text-anchor="end">Vercel</text>
+  <path d="M450 216 V 248" class="flecha"/>
+  <text x="462" y="238" class="et">JWT en cada petición</text>
+
+  <!-- Backend -->
+  <rect x="80" y="248" width="740" height="330" rx="3" class="zona"/>
+  <text x="100" y="274" class="tb">API FastAPI protegida</text>
+  <text x="800" y="274" class="ss" text-anchor="end">Hugging Face Spaces</text>
+
+  <rect x="100" y="290" width="150" height="54" rx="3" class="caja"/>
+  <text x="175" y="312" class="t" text-anchor="middle">Autenticación</text>
+  <text x="175" y="330" class="ss" text-anchor="middle">JWT · Keycloak</text>
+
+  <rect x="264" y="290" width="150" height="54" rx="3" class="caja"/>
+  <text x="339" y="312" class="t" text-anchor="middle">Usuarios y</text>
+  <text x="339" y="330" class="t" text-anchor="middle">conversaciones</text>
+
+  <rect x="428" y="290" width="150" height="54" rx="3" class="caja"/>
+  <text x="503" y="312" class="t" text-anchor="middle">Carga de</text>
+  <text x="503" y="330" class="t" text-anchor="middle">archivos</text>
+
+  <rect x="592" y="290" width="208" height="54" rx="3" class="caja"/>
+  <text x="696" y="312" class="t" text-anchor="middle">Procesamiento</text>
+  <text x="696" y="330" class="ss" text-anchor="middle">extraer · trocear · vectorizar</text>
+
+  <!-- Grafo -->
+  <rect x="100" y="366" width="700" height="192" rx="3" class="caja"/>
+  <text x="120" y="390" class="tb">Agente LangGraph</text>
+  <text x="780" y="390" class="ss" text-anchor="end">7 nodos · 2 bifurcaciones</text>
+
+  <rect x="120" y="404" width="92" height="38" rx="3" class="nodo"/>
+  <text x="166" y="428" class="t" text-anchor="middle" font-size="12">clasificar</text>
+  <path d="M212 423 H 240" class="flecha"/>
+
+  <rect x="240" y="404" width="92" height="38" rx="3" class="nodo"/>
+  <text x="286" y="428" class="t" text-anchor="middle" font-size="12">reformular</text>
+  <path d="M332 423 H 360" class="flecha"/>
+
+  <rect x="360" y="404" width="92" height="38" rx="3" class="nodo"/>
+  <text x="406" y="428" class="t" text-anchor="middle" font-size="12">recuperar</text>
+  <path d="M452 423 H 480" class="flecha"/>
+
+  <rect x="480" y="404" width="92" height="38" rx="3" class="nodo"/>
+  <text x="526" y="428" class="t" text-anchor="middle" font-size="12">evaluar</text>
+
+  <!-- suficiente -->
+  <path d="M572 423 H 600" class="flecha"/>
+  <text x="586" y="416" class="et" text-anchor="middle" font-size="10">sí</text>
+  <rect x="600" y="404" width="92" height="38" rx="3" class="nodo"/>
+  <text x="646" y="428" class="t" text-anchor="middle" font-size="12">generar</text>
+
+  <path d="M692 423 H 714 V 470 H 600" class="flecha"/>
+  <rect x="508" y="452" width="92" height="38" rx="3" class="nodo"/>
+  <text x="554" y="476" class="t" text-anchor="middle" font-size="12">verificar</text>
+
+  <!-- insuficiente -->
+  <path d="M526 442 V 470 H 450" class="flecha"/>
+  <text x="498" y="462" class="s" text-anchor="middle" font-size="10">no alcanza</text>
+  <rect x="330" y="452" width="118" height="38" rx="3" class="fin"/>
+  <text x="389" y="476" class="t" text-anchor="middle" font-size="12">rechazar</text>
+
+  <path d="M389 490 V 516 H 452" class="flecha"/>
+  <path d="M554 490 V 516 H 500" class="flecha"/>
+  <rect x="452" y="498" width="118" height="38" rx="3" class="nodo"/>
+  <text x="511" y="522" class="t" text-anchor="middle" font-size="12">historial</text>
+
+  <!-- Salidas -->
+  <path d="M300 558 V 606" class="flecha"/>
+  <path d="M620 558 V 606" class="flecha"/>
+
+  <rect x="140" y="606" width="320" height="86" rx="3" class="caja"/>
+  <text x="300" y="634" class="tb" text-anchor="middle">Modelo de lenguaje local</text>
+  <text x="300" y="656" class="s" text-anchor="middle">Ollama · qwen3.5:4b</text>
+  <text x="300" y="676" class="ss" text-anchor="middle">alternativa: Transformers de HuggingFace</text>
+
+  <rect x="460" y="606" width="320" height="86" rx="3" class="caja"/>
+  <text x="620" y="634" class="tb" text-anchor="middle">PostgreSQL 16 + pgvector</text>
+  <text x="620" y="656" class="s" text-anchor="middle">usuarios · conversaciones · documentos</text>
+  <text x="620" y="676" class="ss" text-anchor="middle">embeddings: multilingual-e5-small (384 d)</text>
+
+  <text x="32" y="726" class="ss">El nodo «reformular» se omite cuando no hay historial. «verificar» es opcional. Los tres finales convergen en «historial»:</text>
+  <text x="32" y="744" class="ss">toda interacción se guarda, responda o rechace. Cuando el contexto no alcanza, «generar» no llega a ejecutarse.</text>
+</svg>

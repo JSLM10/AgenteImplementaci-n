@@ -165,7 +165,8 @@ h3,
   background: radial-gradient(circle, rgba(52, 211, 153, 0.14), transparent 62%);
   opacity: var(--oCenter, 0);
   filter: blur(26px);
-  transition: opacity 0.2s linear;
+  /* Sin transicion: el componente anima esta opacidad fotograma a fotograma y
+     una transicion CSS encima la haria ir a rastras. */
 }
 
 .mo-mover {
@@ -432,6 +433,11 @@ h3,
   padding: 16px 18px;
   opacity: var(--oCard, 0);
   overflow: hidden;
+  /* Cubre toda la figura. Si capturara el raton mientras es invisible, se
+     tragaria los clics destinados al campo de texto y al boton de enviar. */
+  pointer-events: none;
+}
+.mo-root[data-phase="answered"] .mo-answer {
   pointer-events: auto;
 }
 .mo-answer:focus {
@@ -479,7 +485,10 @@ h3,
   position: absolute;
   left: 50%;
   top: calc(46% + 104px);
-  transform: translate(-50%, var(--sTy, 6px));
+  /* El componente escribe --sTy como numero sin unidad, asi que hay que
+     multiplicarlo por 1px: translate(-50%, 6) seria invalido y tumbaria la
+     transformacion entera, incluido el centrado. */
+  transform: translate(-50%, calc(var(--sTy, 6) * 1px));
   opacity: var(--sOp, 0);
   height: 22px;
   display: grid;

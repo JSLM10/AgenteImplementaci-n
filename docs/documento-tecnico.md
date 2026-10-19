@@ -486,8 +486,38 @@ consulta el estado cada dos segundos hasta `LISTO` o `ERROR`.
 
 ### Fragmentación
 
-`RecursiveCharacterTextSplitter` con 1000 caracteres y 200 de solape, cortando primero
+`RecursiveCharacterTextSplitter` con **500 caracteres y 120 de solape**, cortando primero
 por párrafo y luego por frase para que un fragmento no parta una idea por la mitad.
+
+Cada fragmento se guarda precedido de una línea con el documento y la sección a la que
+pertenece:
+
+```
+mundiales historia — Episodios célebres
+**El Maracanazo (1950).** Uruguay venció 2-1 a Brasil en el Estadio Maracaná…
+```
+
+Esa línea **entra en el embedding**, no es decorativa. Un trozo suelto de una tabla de
+sanciones sigue sabiendo que habla de sanciones.
+
+#### Por qué se cambió (y qué se midió)
+
+La primera versión usaba 1000 caracteres y cuatro fragmentos. El agente rechazaba
+preguntas cuya respuesta estaba claramente en el corpus:
+
+| Pregunta | Antes | Después |
+|---|---|---|
+| ¿Qué pasó en el Maracanazo? | Rechazo | Responde, fragmento correcto en 1.ª posición (0,857) |
+| ¿Qué es el fuera de juego? | Rechazo | Responde, Regla 11 en 1.ª posición (0,873) |
+
+El diagnóstico mostró que no fallaba el evaluador sino la recuperación: para
+«Maracanazo» devolvía el palmarés por selección, el Milagro de Berna y la final de 2021,
+pero **no** el párrafo del Maracanazo, que estaba diluido dentro de un fragmento de 1000
+caracteres junto a otros cinco episodios. El evaluador rechazaba con razón un contexto
+que no contenía la respuesta.
+
+Es un caso instructivo: el síntoma apuntaba al control de alucinaciones, y la causa
+estaba dos capas más abajo, en cómo se parte el texto.
 
 ### Seguridad en la subida
 
@@ -707,13 +737,87 @@ en tiempo de compilación, así que cambiarla exige reconstruir, no solo reinici
 - Que un fallo de la base vectorial no se confunde con falta de información.
 - Que se limpian los bloques de razonamiento del modelo.
 
+### Pruebas de la API
+
+`19 comprobaciones, 0 fallos` sobre el servidor en marcha:
+
+- Los endpoints protegidos devuelven 401 sin token.
+- Registro, login, `me`, y rechazo de correo duplicado y de contraseña incorrecta.
+- **Rotación de refresh:** reutilizar un refresh ya consumido devuelve 401.
+- El corpus de fútbol es visible para una cuenta recién creada (8 documentos).
+- Un usuario no puede borrar documentos de la base común (403).
+- Subida de un documento: responde `PROCESANDO` y pasa solo a `LISTO`.
+
+### Latencia medida, nodo por nodo
+
+Medido en el equipo de destino (i7-1255U, sin GPU), con la pregunta
+*¿Quién ganó el Mundial de 2022?*:
+
+| Nodo | En frío | En caliente |
+|---|---:|---:|
+| `clasificar` | 7,7 s | 1,5 s |
+| `reformular` | 0,0 s | 0,0 s |
+| `recuperar` | 16,2 s | 0,1 s |
+| `evaluar` | 6,8 s | 7,0 s |
+| `generar` | 3,9 s | 3,3 s |
+| **Total** | **34,6 s** | **11,8 s** |
+
+Tres lecturas de esta tabla:
+
+- `reformular` marca 0,0 s porque **se omite** cuando no hay historial, que es el caso de
+  toda primera pregunta.
+- Los 16,2 segundos de `recuperar` en frío son la carga única del modelo de embeddings, no
+  la búsqueda: en caliente son 0,1 s. Por eso el modelo **se precarga al arrancar el
+  servidor**, y la primera pregunta de un usuario cuesta ya 11,8 segundos y no 34.
+- `evaluar` cuesta más que `generar` (7,0 s frente a 3,3 s) porque lee los seis fragmentos
+  mientras que la respuesta es corta. En CPU, leer el prompt pesa más que escribir.
+
+> **Sobre medir con el equipo ocupado.** Una tanda anterior dio 110 s de media. No era el
+> agente: corría a la vez que Vite empaquetaba el frontend y que el backend cargaba sus
+> modelos, y Ollama necesita todos los núcleos. Las cifras de arriba se tomaron con la
+> máquina en reposo. Es la condición de la demostración, y conviene tenerlo presente: no
+> compilar nada mientras se sustenta.
+
 ### Prueba de humo del agente
 
 `uv run python -m scripts.probar_agente` ejecuta el grafo contra nueve preguntas que
 cubren los tres comportamientos exigidos y muestra, para cada una, el camino recorrido
 por el grafo y el tiempo empleado.
 
-*(Resultados y tiempos medidos: ver anexo de la entrega.)*
+Resultado: **9 de 9 correctas.** Respuestas obtenidas, con sus fuentes:
+
+| Pregunta | Resultado |
+|---|---|
+| Hola, buenas tardes | Saludo. El grafo va `clasificar → saludo`, sin tocar la base vectorial |
+| ¿Quién ganó el Mundial de 2022? | «Argentina ganó el Mundial de 2022 [1]» · `mundiales-historia.md` (0,87) |
+| ¿Cuántos Balones de Oro tiene Messi? | «Messi tiene 7 Balones de Oro [2]» · `clasicos-y-leyendas.md` (0,87) |
+| ¿Cuándo ganó Colombia la Copa América? | «Colombia ganó la Copa América en 2001 [1], [2]» · `seleccion-colombia.md` (0,88) |
+| ¿Qué pasó en el Maracanazo? | Responde desde `mundiales-historia.md` (0,857) |
+| ¿Qué es el fuera de juego? | Responde desde `reglas-del-futbol.md` (0,873) |
+| ¿Cuál es la mejor receta para preparar sushi? | **Rechazo.** El grafo va `evaluar → rechazar`, sin pasar por `generar` |
+| ¿Quién ganó el Mundial de 2026? | **Rechazo.** La base llega hasta 2022 |
+| ¿Cuánto cuesta un Tesla Model 3? | **Rechazo** |
+
+La traza confirma el comportamiento. En el rechazo del sushi y en el del Tesla el camino es
+`clasificar → reformular → recuperar → evaluar → rechazar → historial`: **el nodo `generar`
+no llega a ejecutarse.** No es que se pida al modelo que no invente, es que no se le da la
+oportunidad.
+
+El caso del Mundial de 2026 es más interesante y muestra las barreras encadenadas. Ahí la
+traza fue:
+
+```
+clasificar → reformular(omitido) → recuperar → evaluar → generar(autorrechazo) → historial
+```
+
+El evaluador dejó pasar el contexto, porque los fragmentos recuperados **sí hablaban de
+mundiales**, solo que de otras ediciones. Fue el modelo generador el que, atado por el
+prompt a no salirse del contexto, concluyó que no podía responder y devolvió la frase de
+rechazo. El código la detecta y la marca como rechazo real en el historial y en la
+interfaz.
+
+Es la cuarta barrera actuando como red de seguridad de la segunda, y es la prueba de por
+qué conviene tener varias: ninguna es infalible por separado.
 
 ### Capturas
 
@@ -735,6 +839,14 @@ medir en vez de suponer.
 al modelo. Se acotó con un presupuesto de tokens por tipo de tarea, omitiendo la
 reformulación cuando no hay historial, recortando los fragmentos que ve el evaluador y
 dejando la verificación posterior desactivada por defecto.
+
+**Rechazos que parecían del control de alucinaciones y eran del troceado.** El agente se
+negaba a explicar el Maracanazo y el fuera de juego, dos cosas que están escritas en el
+corpus. Lo fácil era culpar al evaluador por estricto y relajarlo. El diagnóstico mostró
+que el evaluador tenía razón: la recuperación no le estaba entregando el párrafo correcto,
+porque estaba diluido dentro de un fragmento de 1000 caracteres junto a otros cinco
+episodios. La causa estaba dos capas por debajo del síntoma. Se arregló troceando más
+fino e incrustando la sección en cada fragmento, no tocando el umbral.
 
 **La incompatibilidad de los embeddings.** Casi se diseña con embeddings de Ollama en
 local y de HuggingFace en la nube. Habría producido una base vectorial con vectores de
@@ -775,6 +887,11 @@ recuperación es mala, se nota.
 **Medir antes de decidir.** Las dos decisiones más importantes del proyecto — el modelo y
 los parámetros de recuperación — salieron de cronometrar, no de leer documentación. El
 modelo que parecía peor resultó ser el bueno en cuanto se configuró bien.
+
+**En un RAG, la calidad del troceado manda sobre todo lo demás.** Se puede tener el mejor
+grafo, los mejores prompts y seis barreras anti-alucinación, y aun así el agente rechaza
+preguntas que debería responder si la recuperación no le entrega el párrafo correcto. Es
+la parte menos vistosa del sistema y la que más condiciona el resultado.
 
 **El rechazo es una funcionalidad.** Es contraintuitivo construir un asistente cuyo logro
 sea negarse a contestar. Pero un sistema que admite lo que no sabe es más útil que uno

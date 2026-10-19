@@ -24,7 +24,11 @@ cd frontend && npm run dev
 ```
 
 **Espera a ver `Modelo de embeddings en memoria` en el log del backend** antes de
-preguntar nada. Sin esa precarga, la primera pregunta tarda 25 segundos en vez de 12.
+preguntar nada. Sin esa precarga, la primera pregunta tarda 34 segundos en vez de 12.
+
+**Cierra todo lo que consuma CPU.** Ollama necesita todos los núcleos. Midiendo con Vite
+empaquetando a la vez, las mismas preguntas pasaron de 12 a 110 segundos de media. Nada de
+compilar, sincronizar OneDrive ni abrir veinte pestañas durante la sustentación.
 
 Deja preparados:
 - El navegador en `http://localhost:5173`, **sin sesión iniciada**.
@@ -184,8 +188,9 @@ que la respuesta provenga de él. Esa es exactamente la garantía que ofrece un 
 eso enseñar las fuentes es parte del diseño.
 
 **¿Cuánto tarda en responder?**
-Unos 12 segundos por pregunta con el modelo cargado; 25 la primera, porque hay que cargar
-el modelo de embeddings. Está medido nodo por nodo en el documento técnico.
+11,8 segundos por pregunta con los modelos cargados. Está medido nodo por nodo en el
+documento técnico: lo más caro es el nodo evaluador, 7 segundos, porque lee los seis
+fragmentos recuperados. En CPU, leer el prompt pesa más que escribir la respuesta.
 
 **¿Por qué ese modelo y no otro?**
 Lo medimos. `qwen3.5:4b` con el razonamiento desactivado da 11,7 tokens por segundo frente
