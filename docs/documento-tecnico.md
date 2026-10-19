@@ -831,6 +831,18 @@ interfaz.
 Es la cuarta barrera actuando como red de seguridad de la segunda, y es la prueba de por
 qué conviene tener varias: ninguna es infalible por separado.
 
+### Validación del nodo de verificación
+
+Un verificador demasiado estricto sería peor que no tenerlo: empezaría a tumbar respuestas
+correctas. Se repitieron los nueve casos con `ENABLE_GROUNDEDNESS_CHECK=true`:
+
+- **9 de 9 correctos**, igual que sin él.
+- Las cinco respuestas fundamentadas atravesaron `verificar` **sin ser rechazadas**.
+- En el caso del Mundial de 2026 se ve la cadena entera en la traza:
+  `generar(autorrechazo) → verificar(rechazada)`. Las dos últimas barreras coincidieron.
+
+Con eso queda encendido por defecto.
+
 ### Capturas
 
 *(Ver `docs/img/`.)*
