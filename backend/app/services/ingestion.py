@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 import uuid
 from pathlib import Path
 
@@ -124,6 +125,27 @@ def _crear_splitter() -> RecursiveCharacterTextSplitter:
     )
 
 
+_RE_ENCABEZADO = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
+
+
+def _encabezados_por_posicion(texto: str) -> list[tuple[int, str]]:
+    """Posicion de cada encabezado Markdown y su texto, en orden."""
+    return [
+        (m.start(), m.group(2).strip().strip("*").strip())
+        for m in _RE_ENCABEZADO.finditer(texto)
+    ]
+
+
+def _encabezado_activo(encabezados: list[tuple[int, str]], posicion: int) -> str | None:
+    """Ultimo encabezado que aparece antes de esa posicion del texto."""
+    activo = None
+    for inicio, titulo in encabezados:
+        if inicio > posicion:
+            break
+        activo = titulo
+    return activo
+
+
 def procesar_documento(
     ruta: Path,
     document_id: uuid.UUID,
@@ -131,15 +153,32 @@ def procesar_documento(
     owner_id: uuid.UUID | None,
     es_publico: bool,
 ) -> int:
-    """Procesa un archivo entero y devuelve el numero de fragmentos creados."""
+    """Procesa un archivo entero y devuelve el numero de fragmentos creados.
+
+    Cada fragmento se guarda precedido de una linea con el documento y la
+    seccion a la que pertenece. No es decorativo: el fragmento se incrusta
+    junto a esa linea, asi que un trozo suelto de una tabla de sanciones sigue
+    sabiendo que habla de sanciones. Sin ese contexto, los fragmentos cortos
+    de documentos largos se vuelven practicamente irrecuperables.
+    """
     partes = extraer_contenido(ruta)
     splitter = _crear_splitter()
+    titulo_documento = Path(nombre_archivo).stem.replace("-", " ").replace("_", " ")
 
     documentos: list[LCDocument] = []
     for texto, pagina in partes:
-        for fragmento in splitter.split_text(texto):
+        encabezados = _encabezados_por_posicion(texto)
+
+        for trozo in splitter.create_documents([texto]):
+            fragmento = trozo.page_content
             if not fragmento.strip():
                 continue
+
+            seccion = _encabezado_activo(encabezados, trozo.metadata.get("start_index", 0))
+            cabecera = titulo_documento if seccion is None else f"{titulo_documento} — {seccion}"
+            if pagina is not None:
+                cabecera += f" (página {pagina})"
+
             metadatos = {
                 "document_id": str(document_id),
                 "nombre_archivo": nombre_archivo,
@@ -150,7 +189,12 @@ def procesar_documento(
             }
             if pagina is not None:
                 metadatos["pagina"] = pagina
-            documentos.append(LCDocument(page_content=fragmento, metadata=metadatos))
+            if seccion:
+                metadatos["seccion"] = seccion
+
+            documentos.append(
+                LCDocument(page_content=f"{cabecera}\n{fragmento}", metadata=metadatos)
+            )
 
     if not documentos:
         raise DocumentoVacioError("El documento no produjo ningún fragmento utilizable.")

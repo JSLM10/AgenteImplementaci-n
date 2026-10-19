@@ -53,12 +53,17 @@ class Settings(BaseSettings):
     COLLECTION_NAME: str = "var_conocimiento"
 
     # ─── RAG ─────────────────────────────────────────────────────────────────
-    # Cada fragmento extra engorda el prompt y, en CPU, leerlo cuesta casi
-    # tanto como generar. Cuatro da suficiente cobertura sin disparar el tiempo.
-    RETRIEVAL_K: int = 4
+    # Seis fragmentos cortos cubren mas terreno que cuatro largos y suman un
+    # prompt parecido, asi que el tiempo de respuesta no se resiente.
+    RETRIEVAL_K: int = 6
+    # E5 comprime el rango de similitud: textos sin relacion rondan ya el 0,75.
+    # El umbral filtra lo claramente ajeno, no ordena lo relevante; de ordenar
+    # se encarga el troceado, y de decidir, el nodo evaluador.
     RETRIEVAL_MIN_SCORE: float = 0.35
-    CHUNK_SIZE: int = 1000
-    CHUNK_OVERLAP: int = 200
+    # Fragmentos cortos y enfocados. Con 1000 caracteres, un parrafo concreto
+    # quedaba diluido entre otros del mismo bloque y no llegaba a recuperarse.
+    CHUNK_SIZE: int = 500
+    CHUNK_OVERLAP: int = 120
     ENABLE_GROUNDEDNESS_CHECK: bool = False
     MAX_HISTORY_MESSAGES: int = 6
 

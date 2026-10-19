@@ -21,12 +21,12 @@ const CLAVE_ACCESS = "var.access_token";
 const CLAVE_REFRESH = "var.refresh_token";
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
   }
 }
 

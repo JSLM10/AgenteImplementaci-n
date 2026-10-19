@@ -67,16 +67,22 @@ Pregunta reescrita:"""
 # Nodo 4 — evaluar si el contexto alcanza
 # ─────────────────────────────────────────────────────────────────────────────
 PROMPT_EVALUACION = """\
-Eres un evaluador estricto. Decide si los fragmentos recuperados contienen la \
-información necesaria para responder la pregunta.
+Decide si los fragmentos recuperados permiten responder la pregunta.
 
 Responde EXACTAMENTE en este formato, en dos líneas:
 VEREDICTO: SUFICIENTE o INSUFICIENTE
 MOTIVO: una frase corta
 
-Criterio: marca SUFICIENTE solo si la respuesta puede deducirse de los \
-fragmentos. Si los fragmentos hablan del tema general pero no contienen el \
-dato concreto que se pide, marca INSUFICIENTE.
+Criterios:
+- SUFICIENTE si los fragmentos contienen el dato que se pide, aunque sea de \
+forma parcial, indirecta o con otras palabras. No exijas que la pregunta \
+aparezca formulada igual.
+- INSUFICIENTE solo si los fragmentos tratan de otro asunto, o si hablan del \
+tema general sin contener en ningún momento el dato concreto.
+
+Ante la duda, marca SUFICIENTE: quien redacta la respuesta tiene prohibido \
+salirse de estos fragmentos, así que un contexto flojo produce una respuesta \
+corta, no una inventada.
 
 Pregunta: {pregunta}
 

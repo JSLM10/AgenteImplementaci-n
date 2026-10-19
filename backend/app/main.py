@@ -61,6 +61,17 @@ async def lifespan(app: FastAPI):
         # el usuario siempre puede subir sus propios documentos.
         logger.exception("No se pudo sembrar el corpus inicial")
 
+    # Precarga del modelo de embeddings. Cargarlo cuesta unos 13 segundos y,
+    # sin esto, los paga la primera pregunta que haga un usuario: la diferencia
+    # medida es de 25,6 s en frio frente a 11,7 s en caliente.
+    try:
+        from app.vectorstore.embeddings import get_embeddings
+
+        get_embeddings().embed_query("calentamiento")
+        logger.info("Modelo de embeddings en memoria")
+    except Exception:
+        logger.exception("No se pudo precargar el modelo de embeddings")
+
     logger.info(
         "Modelo: %s | Auth: %s | Umbral RAG: %.2f",
         settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else settings.HF_MODEL,
