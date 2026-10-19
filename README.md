@@ -254,7 +254,7 @@ comportamiento:
 | `EMBEDDING_MODEL` | `intfloat/multilingual-e5-small` | **No cambiar tras ingestar**: invalida los vectores guardados |
 | `RETRIEVAL_K` | `4` | Fragmentos recuperados por pregunta |
 | `RETRIEVAL_MIN_SCORE` | `0.35` | Umbral de similitud. Subirlo = más rechazos, más precisión |
-| `ENABLE_GROUNDEDNESS_CHECK` | `false` | Nodo extra de verificación. Duplica el tiempo de respuesta |
+| `ENABLE_GROUNDEDNESS_CHECK` | `true` | Nodo extra que verifica la respuesta. Cuesta 0,9 s; apagarlo solo en la nube |
 | `AUTH_PROVIDER` | `local` | `local` o `keycloak` |
 | `JWT_SECRET` | — | **Cambiar siempre** |
 

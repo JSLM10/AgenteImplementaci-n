@@ -21,7 +21,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
-RUN pip install --upgrade pip && pip install .
+# Se instala con el extra "cloud" (transformers + accelerate) para que la misma
+# imagen sirva con LLM_PROVIDER=ollama y con LLM_PROVIDER=huggingface. Pesa
+# poco mas, porque torch ya entra como dependencia de sentence-transformers, y
+# evita una imagen que arranca y falla al primer mensaje por un import que
+# falta.
+RUN pip install --upgrade pip && pip install ".[cloud]"
 
 COPY app ./app
 COPY seed ./seed
@@ -33,9 +38,13 @@ RUN python -c "from sentence_transformers import SentenceTransformer; \
 
 RUN mkdir -p /app/storage
 
+# El puerto se toma del entorno porque cada plataforma impone el suyo:
+# Hugging Face Spaces usa 7860, Render y Railway inyectan $PORT, y en local
+# vale 8000. Fijarlo en el Dockerfile obligaria a mantener una imagen por sitio.
+ENV PORT=8000
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD curl -fsS http://localhost:8000/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD curl -fsS "http://localhost:${PORT}/api/health" || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

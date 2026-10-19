@@ -578,8 +578,15 @@ comprobar por sí mismo de dónde sale cada afirmación en vez de fiarse del mod
 se degrada a rechazo. Solo actúa ante un `NO` explícito: un verificador que falla no debe
 tumbar una respuesta que ya superó el umbral y al evaluador.
 
-Está detrás de `ENABLE_GROUNDEDNESS_CHECK` y desactivado por defecto porque duplica el
-tiempo de respuesta en CPU.
+Está detrás de `ENABLE_GROUNDEDNESS_CHECK` y **va encendido por defecto**. El diseño
+inicial lo dejaba apagado suponiendo que duplicaría el tiempo de respuesta; al medirlo
+resultó costar **0,9 segundos** (de 11,8 a 12,8 por pregunta). El motivo es que su salida
+son ocho tokens y Ollama reaprovecha el contexto que el nodo de generación acaba de
+procesar, así que no hay que releer los fragmentos.
+
+Es un ejemplo de por qué conviene medir antes de recortar: se estuvo a punto de renunciar
+a la sexta barrera por un coste que resultó ser marginal. Solo se apaga en el despliegue
+en la nube, donde el modelo es más pequeño y lento.
 
 ### Comprobación automatizada
 
@@ -755,12 +762,15 @@ Medido en el equipo de destino (i7-1255U, sin GPU), con la pregunta
 
 | Nodo | En frío | En caliente |
 |---|---:|---:|
-| `clasificar` | 7,7 s | 1,5 s |
+| `clasificar` | 7,7 s | 1,3 s |
 | `reformular` | 0,0 s | 0,0 s |
 | `recuperar` | 16,2 s | 0,1 s |
-| `evaluar` | 6,8 s | 7,0 s |
-| `generar` | 3,9 s | 3,3 s |
-| **Total** | **34,6 s** | **11,8 s** |
+| `evaluar` | 6,8 s | 6,8 s |
+| `generar` | 3,9 s | 3,7 s |
+| `verificar` | 0,9 s | 0,9 s |
+| **Total** | **35,5 s** | **12,8 s** |
+
+Es la configuración que se entrega, con las seis barreras activas.
 
 Tres lecturas de esta tabla:
 
@@ -768,9 +778,11 @@ Tres lecturas de esta tabla:
   toda primera pregunta.
 - Los 16,2 segundos de `recuperar` en frío son la carga única del modelo de embeddings, no
   la búsqueda: en caliente son 0,1 s. Por eso el modelo **se precarga al arrancar el
-  servidor**, y la primera pregunta de un usuario cuesta ya 11,8 segundos y no 34.
-- `evaluar` cuesta más que `generar` (7,0 s frente a 3,3 s) porque lee los seis fragmentos
-  mientras que la respuesta es corta. En CPU, leer el prompt pesa más que escribir.
+  servidor**, y la primera pregunta de un usuario cuesta ya 12,8 segundos y no 35.
+- `evaluar` cuesta más que `generar` (6,8 s frente a 3,7 s) porque lee los seis fragmentos
+  mientras que la respuesta es corta. En CPU, leer el prompt pesa más que escribir. Por la
+  misma razón `verificar` cuesta solo 0,9 s pese a ser otra llamada al modelo: Ollama
+  reaprovecha el contexto que `generar` acaba de procesar.
 
 > **Sobre medir con el equipo ocupado.** Una tanda anterior dio 110 s de media. No era el
 > agente: corría a la vez que Vite empaquetaba el frontend y que el backend cargaba sus

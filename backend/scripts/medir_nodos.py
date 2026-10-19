@@ -65,6 +65,11 @@ def _una_pasada():
         estado.update(salida)
         total += s
 
+        salida, s = cronometrar("verificar", nodes.verificar, estado)
+        estado.update(salida)
+        total += s
+        print(f"     {settings.ENABLE_GROUNDEDNESS_CHECK=}", flush=True)
+
     print(f"  {'TOTAL':<14} {total:6.1f}s", flush=True)
     print(f"  Respuesta: {(estado.get('respuesta') or '')[:300]}", flush=True)
     fuentes = estado.get("fuentes") or []

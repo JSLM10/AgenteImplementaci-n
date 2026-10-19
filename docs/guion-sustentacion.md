@@ -107,9 +107,16 @@ Después, la que mejor funciona:
 > «Esta es más interesante, porque sí es de fútbol. Nuestra base llega hasta 2022. El
 > agente no se inventa un campeón: reconoce que no tiene la información.»
 
-Explica brevemente que hay seis barreras, y nombra las dos más visibles: el umbral de
-similitud, que descarta fragmentos **antes** de que el modelo los vea, y el nodo evaluador,
-que decide si lo recuperado alcanza.
+Explica brevemente que hay seis barreras, todas activas, y nombra las tres más visibles en
+la traza: el umbral de similitud, que descarta fragmentos **antes** de que el modelo los
+vea; el nodo evaluador, que decide si lo recuperado alcanza; y el nodo `verificar`, que
+revisa la respuesta ya escrita y la degrada a rechazo si se sale del contexto.
+
+Si sale el caso del Mundial de 2026, merece la pena señalarlo:
+
+> «Fíjense en la traza: aquí el evaluador **sí** dejó pasar el contexto, porque los
+> fragmentos hablaban de mundiales, solo que de otras ediciones. Quien se negó fue el
+> propio nodo de generación. Son barreras encadenadas: ninguna es infalible sola.»
 
 ---
 
@@ -188,9 +195,15 @@ que la respuesta provenga de él. Esa es exactamente la garantía que ofrece un 
 eso enseñar las fuentes es parte del diseño.
 
 **¿Cuánto tarda en responder?**
-11,8 segundos por pregunta con los modelos cargados. Está medido nodo por nodo en el
-documento técnico: lo más caro es el nodo evaluador, 7 segundos, porque lee los seis
-fragmentos recuperados. En CPU, leer el prompt pesa más que escribir la respuesta.
+12,8 segundos por pregunta con los modelos cargados y las seis barreras activas. Está
+medido nodo por nodo en el documento técnico: lo más caro es el nodo evaluador, 6,8
+segundos, porque lee los seis fragmentos recuperados. En CPU, leer el prompt pesa más que
+escribir la respuesta.
+
+**¿Están activas todas las estrategias anti-alucinación durante la demo?**
+Sí, las seis. Incluida la verificación posterior, que en el diseño inicial íbamos a dejar
+apagada por coste y, al medirla, resultó costar 0,9 segundos. En la traza de cada
+respuesta se ve el nodo `verificar` ejecutándose.
 
 **¿Por qué ese modelo y no otro?**
 Lo medimos. `qwen3.5:4b` con el razonamiento desactivado da 11,7 tokens por segundo frente

@@ -64,7 +64,12 @@ class Settings(BaseSettings):
     # quedaba diluido entre otros del mismo bloque y no llegaba a recuperarse.
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 120
-    ENABLE_GROUNDEDNESS_CHECK: bool = False
+    # Sexta barrera anti-alucinacion. Encendida por defecto: medida en el
+    # equipo de destino cuesta 0,9 s (11,8 -> 12,8 s por pregunta), porque su
+    # salida son 8 tokens y Ollama reaprovecha el contexto que acaba de
+    # procesar el nodo de generacion. Solo conviene apagarla en la nube, donde
+    # el modelo es mas pequeno y lento.
+    ENABLE_GROUNDEDNESS_CHECK: bool = True
     MAX_HISTORY_MESSAGES: int = 6
 
     # ─── Autenticacion ───────────────────────────────────────────────────────
