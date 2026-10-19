@@ -1,0 +1,39 @@
+# Entorno
+.env
+.env.local
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Modelos y cache de HuggingFace descargados en tiempo de ejecucion
+.cache/
+hf_cache/
+
+# Archivos subidos por los usuarios
+backend/storage/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# Editores
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,0 +1,61 @@
+[project]
+name = "var-backend"
+version = "1.0.0"
+description = "VAR — agente RAG de futbol con LangChain, LangGraph y modelo local"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # API
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+    # El extra [email] trae email-validator, que EmailStr necesita en tiempo
+    # de ejecucion: sin el, importar los esquemas de autenticacion falla.
+    "pydantic[email]>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    # Base de datos
+    "sqlalchemy>=2.0.36",
+    "psycopg[binary]>=3.2.3",
+    # Autenticacion
+    "bcrypt>=4.2.0",
+    "pyjwt[crypto]>=2.9.0",
+    "httpx>=0.27.2",
+    # Agente
+    "langchain>=0.3.7",
+    "langchain-core>=0.3.15",
+    "langchain-community>=0.3.5",
+    "langchain-ollama>=0.2.0",
+    "langchain-postgres>=0.0.12",
+    "langchain-text-splitters>=0.3.2",
+    "langchain-huggingface>=0.1.2",
+    "langgraph>=0.2.45",
+    # Embeddings locales
+    "sentence-transformers>=3.2.1",
+    # Extraccion de documentos
+    "pypdf>=5.1.0",
+    "python-docx>=1.1.2",
+]
+
+[project.optional-dependencies]
+# Solo se instala en el despliegue en la nube, donde el LLM corre con Transformers
+# en vez de Ollama. En local no hace falta y ahorra ~1 GB de descarga.
+cloud = [
+    "transformers>=4.46.0",
+    "accelerate>=1.1.0",
+]
+dev = [
+    "pytest>=8.3.3",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.uv]
+# El proyecto se ejecuta desde el codigo fuente, no se instala como paquete.
+# Evita una compilacion innecesaria en cada sync.
+package = false
+# OneDrive no soporta los enlaces duros que usa uv por defecto
+# (os error 396). Copiar es algo mas lento pero funciona.
+link-mode = "copy"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

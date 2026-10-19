@@ -1,0 +1,124 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# VAR — stack completo para desarrollo local
+#
+#   docker compose up -d postgres          Solo la base de datos (lo habitual
+#                                          mientras se desarrolla: el backend
+#                                          se corre con uv y recarga en caliente)
+#   docker compose up -d                   Base de datos + backend + frontend
+#   docker compose --profile ollama up -d  Ademas, Ollama en contenedor, para
+#                                          maquinas que no lo tienen instalado
+#   docker compose --profile keycloak up -d  Ademas, Keycloak
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ───────────────────────────────────────────────────────────────────────────
+  # PostgreSQL con pgvector — guarda usuarios, conversaciones, mensajes,
+  # documentos y los embeddings. Una sola base para todo.
+  # ───────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: var-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: var
+      POSTGRES_PASSWORD: var
+      POSTGRES_DB: vardb
+    ports:
+      - "5432:5432"
+    volumes:
+      - var_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U var -d vardb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backend FastAPI — API protegida y agente LangGraph.
+  # Se conecta al Ollama del host; si se usa el perfil "ollama", cambiar
+  # OLLAMA_BASE_URL a http://ollama:11434.
+  # ───────────────────────────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: var-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://var:var@postgres:5432/vardb
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:4b}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-local}
+      JWT_SECRET: ${JWT_SECRET:-clave-de-desarrollo-no-usar-en-produccion}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:4173
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - var_storage:/app/storage
+      - var_hfcache:/app/hf_cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Frontend React servido por nginx.
+  # ───────────────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: var-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Ollama en contenedor — perfil opcional.
+  # Solo para maquinas sin Ollama instalado. Si ya lo tienes nativo, no lo
+  # levantes: compartirian el puerto 11434 y tendrias que volver a descargar
+  # los modelos dentro del volumen del contenedor.
+  # ───────────────────────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: var-ollama
+    profiles: ["ollama"]
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - var_ollama:/root/.ollama
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Keycloak — perfil opcional, para AUTH_PROVIDER=keycloak.
+  # Importa el realm "var" automaticamente al arrancar.
+  # Consola: http://localhost:8080  (admin / admin)
+  # ───────────────────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: var-keycloak
+    profiles: ["keycloak"]
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/keycloak:/opt/keycloak/data/import:ro
+
+volumes:
+  var_pgdata:
+    name: var-pgdata
+  var_storage:
+    name: var-storage
+  var_hfcache:
+    name: var-hfcache
+  var_ollama:
+    name: var-ollama
